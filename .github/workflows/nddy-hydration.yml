@@ -46,22 +46,30 @@ jobs:
     timeout-minutes: 22
     steps:
       - uses: actions/checkout@v4
-      - name: Install CP2K
+      - uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: cp2k
+          create-args: >-
+            python=3.11 cp2k=2026.2
+          init-shell: bash
+      - name: Inspect conda CP2K runtime
+        shell: bash -el {0}
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y cp2k
-          command -v cp2k.ssmp || command -v cp2k.psmp || command -v cp2k
+          echo "CP2K installation: $CONDA_PREFIX"
+          command -v cp2k || command -v cp2k.ssmp || command -v cp2k.psmp
       - name: Prepare CP2K data and single test case
+        shell: bash -el {0}
         run: |
           mkdir -p build/cp2k
           python simulations/cp2k_hydration/generate.py --out build/cp2k --run-type ENERGY
-          DATA_DIR=$(dirname "$(find /usr/share /opt -name LnPP2_POTENTIALS -print -quit)")
+          DATA_DIR=$(dirname "$(find "$CONDA_PREFIX" -name LnPP2_POTENTIALS -print -quit)")
           test -f "$DATA_DIR/BASIS_MOLOPT_LnPP2"
           test -f "$DATA_DIR/BASIS_MOLOPT"
           test -f "$DATA_DIR/GTH_POTENTIALS"
           cp "$DATA_DIR/BASIS_MOLOPT_LnPP2" "$DATA_DIR/BASIS_MOLOPT" build/cp2k/
           cat "$DATA_DIR/LnPP2_POTENTIALS" "$DATA_DIR/GTH_POTENTIALS" > build/cp2k/POTENTIALS_COMBINED
       - name: Run one actual CP2K single-point SCF
+        shell: bash -el {0}
         working-directory: build/cp2k
         run: |
           set -o pipefail
