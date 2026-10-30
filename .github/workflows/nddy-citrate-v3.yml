@@ -1,0 +1,45 @@
+name: NdDy citrate V3 mass-balance regression
+on:
+  push:
+    branches: ["pilot/phreeqc-nd-dy-2026-10-31"]
+    paths:
+      - "scripts/citrate_speciation_v3.py"
+      - "tests/test_citrate_speciation_v3.py"
+      - ".github/workflows/nddy-citrate-v3.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/citrate_speciation_v3.py"
+      - "tests/test_citrate_speciation_v3.py"
+      - ".github/workflows/nddy-citrate-v3.yml"
+permissions:
+  contents: read
+jobs:
+  citrate-equilibrium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify mass balances and literature constants
+        run: python -m unittest discover -s tests -p "test_citrate_speciation_v3.py" -v
+      - name: Compute and verify 18 conditional equilibrium rows
+        run: |
+          python scripts/citrate_speciation_v3.py --output build/v3_citrate_partial.csv
+          python - <<'PY'
+          import csv
+          with open("build/v3_citrate_partial.csv", encoding="utf8") as f:
+              rows=list(csv.DictReader(f))
+          assert len(rows)==18, len(rows)
+          for r in rows:
+              assert abs(float(r["citrate_balance_error_M"])) < 1e-12
+              for el in ("Nd","Dy"):
+                  assert abs(float(r[el+"_metal_balance_error_M"])) < 1e-12
+          print("Validated 18 rows and mass balances.")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nd-dy-citrate-v3-partial-speciation-csv
+          path: build/v3_citrate_partial.csv
