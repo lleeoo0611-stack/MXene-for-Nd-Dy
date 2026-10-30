@@ -58,3 +58,17 @@ New V2 outputs under `results/literature_v2/`: citrate uncomplexed speciation; r
 ## CP2K Nd/Dy hydration starter
 
 A reproducible LnPP2 4f-in-core trivalent lanthanide CP2K hydration cluster input generator and tests are in [`simulations/cp2k_hydration/`](simulations/cp2k_hydration/README.md). These are **initial geometry / input tests**, not evidence of hydrated-ion free energies or Nd/Dy membrane selectivity. The associated GitHub Actions CI checks input generation and runs a bounded single-point SCF smoke test.
+
+## Pilot V3：Nd/Dy–citrate 文獻常數的部分配位平衡
+
+- [完整方法、數值與重大限制](docs/CITRATE_SPECIATION_V3.md)。
+- [可執行的純 Python 模型](scripts/citrate_speciation_v3.py) 與 [回歸測試](tests/test_citrate_speciation_v3.py)。
+- 文獻 Table 1 取得混合 `Ln(Cit)(HCit)²−` 的 `logβ°`：Nd **13.05**，Dy **13.28**（ACS Earth and Space Chemistry, DOI [10.1021/acsearthspacechem.4c00009](https://doi.org/10.1021/acsearthspacechem.4c00009)）。
+- pH 5.5、I=0.01 M、Nd/Dy 各 0.1 mM、游離 citrate 0.1 mM：模型計算 Nd 指定配合物 **19.9%**、Dy **29.6%**。
+- **僅部分水溶液物種**（缺其他 LnCit/水解/硝酸根等配合物），也**不代表固定 citrate 的配位常數**；禁止將數字當完整物種預測或 Nd/Dy 穿透率。
+- GitHub Actions 自動產生 18 組條件的 CSV 並檢查金屬／citrate 質量平衡。純 Python，無需 DFT/MD 商用授權。
+
+```bash
+python scripts/citrate_speciation_v3.py
+python -m unittest discover -s tests -p test_citrate_speciation_v3.py -v
+```
