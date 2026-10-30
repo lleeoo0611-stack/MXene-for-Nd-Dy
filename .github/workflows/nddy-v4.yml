@@ -1,0 +1,48 @@
+name: NdDy V4 integrated aqueous-model archive verification
+on:
+  push:
+    branches: ["pilot/phreeqc-nd-dy-2026-10-31"]
+    paths:
+      - "scripts/integrated_speciation_v4.py"
+      - "scripts/citrate_speciation_v3.py"
+      - "tests/test_integrated_v4.py"
+      - "results/v4_*.csv"
+      - "configs/pilot_v4.json"
+      - ".github/workflows/nddy-v4.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/integrated_speciation_v4.py"
+      - "scripts/citrate_speciation_v3.py"
+      - "tests/test_integrated_v4.py"
+      - "results/v4_*.csv"
+      - "configs/pilot_v4.json"
+      - ".github/workflows/nddy-v4.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  v4-mass-balance-and-archive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Unit and regression tests (standard library only)
+        run: |
+          python -m unittest discover -s tests -p "test_citrate_speciation_v3.py" -v
+          python -m unittest discover -s tests -p "test_integrated_v4.py" -v
+      - name: Regenerate 36+324+324 and verify committed numeric CSV
+        run: |
+          python scripts/integrated_speciation_v4.py --out-dir build/v4 --check-committed
+          python scripts/citrate_speciation_v3.py --output build/v3.csv
+      - name: Archive generated calculations
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nd-dy-v4-regenerated-partial-results
+          path: |
+            build/v3.csv
+            build/v4/*.csv

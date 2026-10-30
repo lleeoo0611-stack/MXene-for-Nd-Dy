@@ -72,3 +72,13 @@ A reproducible LnPP2 4f-in-core trivalent lanthanide CP2K hydration cluster inpu
 python scripts/citrate_speciation_v3.py
 python -m unittest discover -s tests -p test_citrate_speciation_v3.py -v
 ```
+
+## V4：保留 V1–V3 並整合來源、設定與產出（2026-10-31）
+
+- [V4 溶液物種數值模型與核查](docs/V4_PROVENANCE_AND_QC.md)；[機器可讀設定](configs/pilot_v4.json)。
+- [V1 PHREEQC 無 citrate 基準](results/phreeqc_pilot_grid.csv) 72 組；[V2 重現曲線資料](results/v2_breakthrough_reproduced.csv)；[V3 重算結果](results/v3_citrate_aqueous_partial_reproduced.csv) 18 組。
+- [V4 36 組基準](results/v4_citrate_baseline_36.csv)、[324 組 citrate β 敏感度](results/v4_beta_scenarios_324.csv)、[324 組條件式自由離子／膜進入假設](results/v4_conditional_transport_324.csv)。
+- **V4 是 PHREEQC 無 citrate 校正分率 + 文獻單一 Ln(Cit)(HCit)²⁻ 配合物的混合近似；不是完整水溶液平衡、表面錯合模型、DFT、MD 或真實膜通量。**
+- 前一次 CP2K SCF job 因 GitHub runner shutdown 被取消，**沒有已驗證的 DFT 能量**；已將耗資源的 CP2K 工作切換成手動觸發。
+
+`python scripts/integrated_speciation_v4.py --out-dir build/v4 --check-committed` 可重算並核對 V4 數據。

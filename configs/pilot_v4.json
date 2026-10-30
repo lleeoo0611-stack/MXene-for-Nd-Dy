@@ -1,0 +1,60 @@
+{
+  "version": "v4.0",
+  "temperature_K": 298.15,
+  "reference_PHREEQC_grid": "results/phreeqc_pilot_grid.csv",
+  "reference_PHREEQC_software": "PHREEQC 3.8.6-17100; llnl.dat; no citrate/carbonate",
+  "literature_logbeta_source": "Wen et al. (2024), ACS Earth and Space Chemistry, 10.1021/acsearthspacechem.4c00009, Table 1",
+  "literature_logbeta_mixed_citrate": {
+    "Nd": 13.05,
+    "Dy": 13.28
+  },
+  "literature_reaction": "Ln3+ + Cit3- + HCit2- = Ln(Cit)(HCit)2-; log beta standard-state",
+  "free_citrate_pKa": [
+    3.13,
+    4.76,
+    6.4
+  ],
+  "pKa_source": "citric-acid uncomplexed equilibrium; original V2",
+  "pH": [
+    4.5,
+    5.5,
+    6.5
+  ],
+  "NaNO3_background_mmolkgw": [
+    10,
+    100
+  ],
+  "each_Ln_total_mM": 0.1,
+  "citrate_total_mM": [
+    0,
+    0.05,
+    0.1,
+    0.2,
+    0.5,
+    1
+  ],
+  "logbeta_shift_scenarios": [
+    -0.5,
+    0,
+    0.5
+  ],
+  "assumed_entry_GDy_minus_GNd_kJmol": [
+    -2,
+    0,
+    2
+  ],
+  "assumed_mobile_DNd_over_DDy": [
+    0.5,
+    1,
+    2
+  ],
+  "model_assumptions": [
+    "Only Ln(Cit)(HCit)2- among the many aqueous Ln-citrate complexes",
+    "PHREEQC citrate-free nonfree Ln fraction is a fixed effective odds calibrated at each pH/salt",
+    "Davies I approximated by NaNO3 background: not self-consistent, limited accuracy for trivalent ions",
+    "Metal concentration units are approximated as mol/L from mmol/kg water in dilute conditions",
+    "Only free Ln3+ permeates in illustrative transport; no membrane charge or multi-ion transport",
+    "No fitted surface citrate binding, no DFT, no MD or measured transport",
+    "+/-0.5 logbeta are chosen sensitivity scenarios, NOT statistical uncertainty estimates"
+  ]
+}
