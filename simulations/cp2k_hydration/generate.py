@@ -53,7 +53,9 @@ def coords(ion, nw):
 def make_input(ion, nw, run_type="ENERGY", cutoff=450):
     if run_type not in ("ENERGY","GEO_OPT"): raise ValueError(run_type)
     lines=[f"{el:<2s} {p[0]:.8f} {p[1]:.8f} {p[2]:.8f}" for el,p in coords(ion,nw)]
-    geo_section = "&MOTION\n  &GEO_OPT\n    OPTIMIZER BFGS\n    MAX_ITER 80\n    MAX_DR 0.04\n  &END GEO_OPT\n&END MOTION\n" if run_type == "GEO_OPT" else ""\n    coord_text = "\n".join("      " + line for line in lines)\n    # 4f-in-core LnPP2 PBE q11 for both Nd and Dy; charges account for ion +3.
+    geo_section = ("&MOTION\n  &GEO_OPT\n    OPTIMIZER BFGS\n    MAX_ITER 80\n    MAX_DR 0.04\n  &END GEO_OPT\n&END MOTION\n" if run_type == "GEO_OPT" else "")
+    coord_text = "\n".join("      " + line for line in lines)
+    # 4f-in-core LnPP2 PBE q11 for both Nd and Dy; charges account for ion +3.
     # POTENTIALS_COMBINED = LnPP2_POTENTIALS + GTH_POTENTIALS (no redistribution).
     return f"""&GLOBAL
   PROJECT {ion.lower()}_w{nw}
