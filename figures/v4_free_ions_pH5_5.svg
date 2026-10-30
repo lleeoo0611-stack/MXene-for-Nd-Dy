@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="500" viewBox="0 0 880 500">
+<rect width="880" height="500" fill="white"/>
+<text x="42" y="36" font-size="21" font-family="Arial,sans-serif" fill="#18253b">V4: free Ln³⁺ fraction vs total citrate (conditional model)</text>
+<text x="45" y="60" font-size="12" font-family="Arial,sans-serif" fill="#555">pH 5.5 · each Nd/Dy = 0.10 mM · no surface binding · missing other citrate complexes</text>
+<path d="M 90 80 V 385 H 800" stroke="#555" fill="none"/>
+<line x1="90" y1="385" x2="800" y2="385" stroke="#ececec"/>
+<text x="72" y="390" font-size="12" text-anchor="end" font-family="Arial">0.0</text>
+<line x1="90" y1="324" x2="800" y2="324" stroke="#ececec"/>
+<text x="72" y="329" font-size="12" text-anchor="end" font-family="Arial">0.2</text>
+<line x1="90" y1="263" x2="800" y2="263" stroke="#ececec"/>
+<text x="72" y="268" font-size="12" text-anchor="end" font-family="Arial">0.4</text>
+<line x1="90" y1="201.99999999999997" x2="800" y2="201.99999999999997" stroke="#ececec"/>
+<text x="72" y="206.99999999999997" font-size="12" text-anchor="end" font-family="Arial">0.6</text>
+<line x1="90" y1="141" x2="800" y2="141" stroke="#ececec"/>
+<text x="72" y="146" font-size="12" text-anchor="end" font-family="Arial">0.8</text>
+<line x1="90" y1="80" x2="800" y2="80" stroke="#ececec"/>
+<text x="72" y="85" font-size="12" text-anchor="end" font-family="Arial">1.0</text>
+<line x1="90" y1="385" x2="90" y2="390" stroke="#444"/>
+<text x="90" y="405" font-size="12" text-anchor="middle" font-family="Arial">0.0</text>
+<line x1="232" y1="385" x2="232" y2="390" stroke="#444"/>
+<text x="232" y="405" font-size="12" text-anchor="middle" font-family="Arial">0.1</text>
+<line x1="374" y1="385" x2="374" y2="390" stroke="#444"/>
+<text x="374" y="405" font-size="12" text-anchor="middle" font-family="Arial">0.2</text>
+<line x1="516" y1="385" x2="516" y2="390" stroke="#444"/>
+<text x="516" y="405" font-size="12" text-anchor="middle" font-family="Arial">0.3</text>
+<line x1="658" y1="385" x2="658" y2="390" stroke="#444"/>
+<text x="658" y="405" font-size="12" text-anchor="middle" font-family="Arial">0.4</text>
+<line x1="800" y1="385" x2="800" y2="390" stroke="#444"/>
+<text x="800" y="405" font-size="12" text-anchor="middle" font-family="Arial">0.5</text>
+<text x="445" y="435" font-size="14" text-anchor="middle" font-family="Arial">Total citrate, mM</text>
+<text x="21" y="231" font-size="14" text-anchor="middle" font-family="Arial" transform="rotate(-90 21 231)">Free trivalent ion fraction</text>
+<polyline points="90.00,92.31 161.00,119.67 232.00,149.60 374.00,216.89 800.00,384.85" stroke="#0060b8" stroke-width="2.6" fill="none" stroke-dasharray="none"/>
+<circle cx="90" cy="92.31285000000003" r="3.1" fill="#0060b8"/>
+<circle cx="161" cy="119.67256127364499" r="3.1" fill="#0060b8"/>
+<circle cx="232" cy="149.59714765968002" r="3.1" fill="#0060b8"/>
+<circle cx="374" cy="216.88643295571998" r="3.1" fill="#0060b8"/>
+<circle cx="800" cy="384.8510812734851" r="3.1" fill="#0060b8"/>
+<line x1="130" y1="460" x2="160" y2="460" stroke="#0060b8" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="167" y="464" font-size="12" font-family="Arial" fill="#333">Nd³⁺ 10 mM NO₃⁻</text>
+<polyline points="90.00,83.33 161.00,129.46 232.00,173.44 374.00,253.67 800.00,384.91" stroke="#dc5f20" stroke-width="2.6" fill="none" stroke-dasharray="none"/>
+<circle cx="90" cy="83.33364999999998" r="3.1" fill="#dc5f20"/>
+<circle cx="161" cy="129.456613504105" r="3.1" fill="#dc5f20"/>
+<circle cx="232" cy="173.443673359395" r="3.1" fill="#dc5f20"/>
+<circle cx="374" cy="253.670514429295" r="3.1" fill="#dc5f20"/>
+<circle cx="800" cy="384.9122910222227" r="3.1" fill="#dc5f20"/>
+<line x1="465" y1="460" x2="495" y2="460" stroke="#dc5f20" stroke-width="2.4" stroke-dasharray="none"/>
+<text x="502" y="464" font-size="12" font-family="Arial" fill="#333">Dy³⁺ 10 mM NO₃⁻</text>
+<polyline points="90.00,139.87 161.00,160.25 232.00,183.41 374.00,237.29 800.00,383.81" stroke="#0060b8" stroke-width="2.6" fill="none" stroke-dasharray="8 5"/>
+<circle cx="90" cy="139.86845" r="3.1" fill="#0060b8"/>
+<circle cx="161" cy="160.25139188264" r="3.1" fill="#0060b8"/>
+<circle cx="232" cy="183.40714131556" r="3.1" fill="#0060b8"/>
+<circle cx="374" cy="237.294718721555" r="3.1" fill="#0060b8"/>
+<circle cx="800" cy="383.80561599135757" r="3.1" fill="#0060b8"/>
+<line x1="130" y1="480" x2="160" y2="480" stroke="#0060b8" stroke-width="2.4" stroke-dasharray="8 5"/>
+<text x="167" y="484" font-size="12" font-family="Arial" fill="#333">Nd³⁺ 100 mM NO₃⁻</text>
+<polyline points="90.00,90.46 161.00,136.46 232.00,180.56 374.00,259.45 800.00,384.29" stroke="#dc5f20" stroke-width="2.6" fill="none" stroke-dasharray="8 5"/>
+<circle cx="90" cy="90.46454999999997" r="3.1" fill="#dc5f20"/>
+<circle cx="161" cy="136.459074087905" r="3.1" fill="#dc5f20"/>
+<circle cx="232" cy="180.560230849075" r="3.1" fill="#dc5f20"/>
+<circle cx="374" cy="259.44764687873" r="3.1" fill="#dc5f20"/>
+<circle cx="800" cy="384.29494278758335" r="3.1" fill="#dc5f20"/>
+<line x1="465" y1="480" x2="495" y2="480" stroke="#dc5f20" stroke-width="2.4" stroke-dasharray="8 5"/>
+<text x="502" y="484" font-size="12" font-family="Arial" fill="#333">Dy³⁺ 100 mM NO₃⁻</text>
+</svg>

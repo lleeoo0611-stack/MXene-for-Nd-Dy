@@ -35,6 +35,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_cp2k_generator.py' -v
           python simulations/cp2k_hydration/generate.py --out build/hydration --run-type ENERGY
+          python -m unittest discover -s tests -p 'test_cp2k_snapshot.py' -v
           test "$(find build/hydration -name '*.inp' | wc -l)" -eq 4
       - uses: actions/upload-artifact@v4
         with:

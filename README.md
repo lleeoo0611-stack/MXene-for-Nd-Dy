@@ -82,3 +82,6 @@ python -m unittest discover -s tests -p test_citrate_speciation_v3.py -v
 - 前一次 CP2K SCF job 因 GitHub runner shutdown 被取消，**沒有已驗證的 DFT 能量**；已將耗資源的 CP2K 工作切換成手動觸發。
 
 `python scripts/integrated_speciation_v4.py --out-dir build/v4 --check-committed` 可重算並核對 V4 數據。
+
+- [V4 計算結果與實驗判讀](docs/V4_PILOT_DECISION.md)；[自由 Nd/Dy 的 SVG 圖](figures/v4_free_ions_pH5_5.svg)。
+- [CP2K 四組未最佳化的 .inp / .xyz 結構快照](simulations/cp2k_hydration/snapshots/)，並由 generator regression test 驗證；**不是 DFT 能量結果**。
