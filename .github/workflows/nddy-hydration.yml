@@ -41,7 +41,7 @@ jobs:
           name: nd-dy-hydration-inputs-not-computed-results
           path: build/hydration/
   cp2k-single-point:
-    if: github.event_name == 'workflow_dispatch' && inputs.run_cp2k
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.run_cp2k)
     runs-on: ubuntu-24.04
     timeout-minutes: 22
     steps:
