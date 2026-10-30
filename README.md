@@ -40,3 +40,17 @@ python -m unittest discover -s tests -v
 ## 文獻定位
 
 Zhang et al., *Science* **394**, 434–439 (2026), DOI [10.1126/science.aed8319](https://doi.org/10.1126/science.aed8319) 與 SI 研究的是 **NH₄⁺ rotatable crosslinker–water transport**；尚無 Nd/Dy–citrate 的直接結果。不可把該文的 NH₄⁺旋轉機制直接當成稀土水合離子的機制。
+
+## Pilot V2: literature-grounded analytical models (2026-10-31)
+
+Peer-reviewed source audit and equations: [docs/LITERATURE_MODEL_V2.md](docs/LITERATURE_MODEL_V2.md).
+
+```bash
+pip install -r requirements.txt
+python scripts/literature_pilot_v2.py
+python -m unittest discover -s tests -v
+```
+
+New V2 outputs under `results/literature_v2/`: citrate uncomplexed speciation; reversible binding breakthrough; site-affinity sensitivity; steady partition/mobility sensitivity. **All surface K, site pKa, binding/entry energies and mobility differences are scenarios, not DFT/MD or empirically fitted values.**
+
+**Key correction:** fixed reversible sorption increases transient lag but may have no effect on steady permeability when mobile partition and diffusion are unchanged. Neither uptake nor conditional first-passage time equals membrane steady flux.
