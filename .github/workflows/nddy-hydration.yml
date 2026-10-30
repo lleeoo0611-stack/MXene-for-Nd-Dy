@@ -7,6 +7,12 @@ on:
       - "simulations/cp2k_hydration/**"
       - "tests/test_cp2k_generator.py"
       - ".github/workflows/nddy-hydration.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "simulations/cp2k_hydration/**"
+      - "tests/test_cp2k_generator.py"
+      - ".github/workflows/nddy-hydration.yml"
   workflow_dispatch:
     inputs:
       run_cp2k:
