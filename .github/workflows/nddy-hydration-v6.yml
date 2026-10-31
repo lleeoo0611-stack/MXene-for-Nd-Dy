@@ -1,0 +1,113 @@
+name: NdDy V6 hydration optimization and multi-seed MD
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "simulations/cp2k_hydration/generate_v6.py"
+      - "simulations/cp2k_hydration/analyze_v6.py"
+      - "simulations/openmm_hydration/run.py"
+      - "tests/test_hydration_v6.py"
+      - ".github/workflows/nddy-hydration-v6.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  inputs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: V6 settings and source tests
+        run: |
+          python -m unittest discover -s tests -p 'test_hydration_v6.py' -v
+          python simulations/cp2k_hydration/generate_v6.py --out build/v6_dft
+          test "$(find build/v6_dft -name '*_geo.inp' | wc -l)" -eq 4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: V6-four-CP2K-GEO_OPT-inputs
+          path: build/v6_dft/*.inp
+
+  cp2k-geopt-screen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32
+    strategy:
+      fail-fast: false
+      matrix:
+        ion: [Nd, Dy]
+        water: [8, 9]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: cp2k
+          create-args: python=3.11 cp2k=2026.2
+          init-shell: bash
+      - name: Prepare 4f-in-core LnPP2 CP2K screening calculation
+        shell: bash -el {0}
+        run: |
+          mkdir -p build/v6_dft
+          python simulations/cp2k_hydration/generate_v6.py --out build/v6_dft --box 18 --cutoff 220 --eps-scf 1e-5 --max-iter 55
+          DATA_DIR=$(dirname "$(find "$CONDA_PREFIX" -name LnPP2_POTENTIALS -print -quit)")
+          test -f "$DATA_DIR/BASIS_MOLOPT_LnPP2"
+          cp "$DATA_DIR/BASIS_MOLOPT_LnPP2" "$DATA_DIR/BASIS_MOLOPT" build/v6_dft/
+          cat "$DATA_DIR/LnPP2_POTENTIALS" "$DATA_DIR/GTH_POTENTIALS" > build/v6_dft/POTENTIALS_COMBINED
+      - name: Actual geometry optimization, strictly check completion
+        shell: bash -el {0}
+        working-directory: build/v6_dft
+        run: |
+          name=$(echo '${{ matrix.ion }}' | tr '[:upper:]' '[:lower:]')_w${{ matrix.water }}_geo
+          bin=$(command -v cp2k.ssmp || command -v cp2k.psmp || command -v cp2k)
+          export OMP_NUM_THREADS=2
+          timeout 1550s "$bin" -i "$name.inp" -o "$name.out"
+          python ../../simulations/cp2k_hydration/analyze_v6.py --log "$name.out" --directory . --output "$name.status.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cp2k-${{ matrix.ion }}-H2O${{ matrix.water }}-GEO_OPT-status-and-log
+          if-no-files-found: warn
+          path: |
+            build/v6_dft/*_geo.inp
+            build/v6_dft/*.out
+            build/v6_dft/*-pos-1.xyz
+            build/v6_dft/*.status.json
+
+  hydration-md-multiseed-screen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        ion: [Nd, Dy]
+        seed: [20261031, 20261101, 20261102]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install openmm==8.4.0 numpy
+      - name: Actual OpenMM 12-6-4 MD; 40 ps NVT equilibration + 80 ps analysis
+        run: |
+          python simulations/openmm_hydration/run.py --ion ${{ matrix.ion }} --seed ${{ matrix.seed }} --equil-steps 20000 --sample-steps 40000 --interval 100 --box-nm 2.5 --out build/v6_md
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=list(Path('build/v6_md').glob('*_summary.json'))
+          assert len(a)==1
+          s=json.loads(a[0].read_text())
+          assert s['seed'] in (20261031,20261101,20261102)
+          assert s['frames']==400
+          assert s['production_ps']==80
+          assert s['n_water']>150
+          assert 0<s['observed_mean_CN_r0p35nm']<15
+          print('MD 120 ps, NOT yet equilibrium-validated',s)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: openmm-${{ matrix.ion }}-seed-${{ matrix.seed }}-120ps
+          if-no-files-found: warn
+          path: build/v6_md/*
