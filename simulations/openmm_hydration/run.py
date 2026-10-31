@@ -27,7 +27,8 @@ def ion_parameters(ion):
                 c4_kJmol_nm4=4.184e-4*x["c4_kcal_A4"])
 
 def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
-        sample_interval=25, box_nm=2.5, seed=20261031):
+        sample_interval=25, box_nm=2.5, seed=20261031,
+        initial_cn=None):
     import numpy as np
     import openmm
     from openmm import Vec3, unit, app
@@ -45,11 +46,20 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
         oxygen=next(a.index for a in atoms if a.element.symbol=="O")
         hydrogens=[a.index for a in atoms if a.element.symbol=="H"]
         waters.append((oxygen,hydrogens[0],hydrogens[1]))
-    # Replace the water closest to cell center with one Ln3+.
-    idx=min(range(len(waters)),
-            key=lambda k:float(np.linalg.norm(xyz[waters[k][0]]-box_nm/2)))
-    metal_pos=xyz[waters[idx][0]]
-    waters.pop(idx)
+    shell_info=None
+    if initial_cn is not None:
+        from cn_initial_v7 import prepare_shell
+        water_positions,metal_pos,shell_info=prepare_shell(
+            xyz,waters,box_nm,seed,int(initial_cn))
+        # Preparation is deterministic for (seed, initial_cn) and records
+        # the actual number of first-shell waters before minimization.
+    else:
+        # Legacy V5/V6 initialization, one displaced water, no shell control.
+        idx=min(range(len(waters)),
+                key=lambda k:float(np.linalg.norm(xyz[waters[k][0]]-box_nm/2)))
+        metal_pos=xyz[waters[idx][0]]
+        waters.pop(idx)
+        water_positions=[tuple(xyz[q] for q in (i,j,k)) for i,j,k in waters]
 
     system=openmm.System()
     v=Vec3
@@ -60,12 +70,12 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
     nb.setCutoffDistance(.9*unit.nanometer)
     nb.setEwaldErrorTolerance(5e-4)
     pos=[]; oxygen_indices=[]
-    for i,j,k in waters:
+    for xyz_o,xyz_h1,xyz_h2 in water_positions:
         a=system.addParticle(15.999*unit.dalton)
         b=system.addParticle(1.008*unit.dalton)
         c=system.addParticle(1.008*unit.dalton)
         oxygen_indices.append(a)
-        pos.extend((xyz[i],xyz[j],xyz[k]))
+        pos.extend((xyz_o,xyz_h1,xyz_h2))
         nb.addParticle(-.834,.315075*unit.nanometer,
                        .636386*unit.kilojoule_per_mole)
         nb.addParticle(+.417,.1*unit.nanometer,0*unit.kilojoule_per_mole)
@@ -104,14 +114,32 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
     integ.setRandomNumberSeed(seed)
     ctx=openmm.Context(system,integ,openmm.Platform.getPlatformByName("CPU"),
                        {"Threads":"2"})
+    initial_cn_actual=int(sum(
+        np.linalg.norm((np.asarray(pos)[oxygen_indices]-np.asarray(metal_pos)+
+                        box_nm/2)%box_nm-box_nm/2,axis=1)<.35))
+    if initial_cn is not None and initial_cn_actual!=initial_cn:
+        raise RuntimeError("Requested initial CN was not obtained")
+    if initial_cn is not None:
+        with (out/(ion.lower()+f"_initial_cn{initial_cn}_seed{seed}.xyz")).open("w") as f:
+            f.write(str(1+3*len(water_positions))+"\n")
+            f.write("Unequilibrated, constructed inner shell; nanometers converted to A\n")
+            f.write("%s %.7f %.7f %.7f\n"%(ion,*(10*np.asarray(metal_pos))))
+            for x,y,z in water_positions:
+                for elem,r in zip(("O","H","H"),(x,y,z)):
+                    f.write("%s %.7f %.7f %.7f\n"%(elem,*(10*np.asarray(r))))
     ctx.setPositions(np.asarray(pos)*unit.nanometer)
-    openmm.LocalEnergyMinimizer.minimize(ctx,maxIterations=200)
+    openmm.LocalEnergyMinimizer.minimize(ctx,maxIterations=300)
+    r_min=ctx.getState(getPositions=True).getPositions(asNumpy=True).value_in_unit(unit.nanometer)
+    dr_min=r_min[oxygen_indices]-r_min[mid]
+    dr_min-=box_nm*np.rint(dr_min/box_nm)
+    minimized_cn=int(np.sum(np.linalg.norm(dr_min,axis=1)<.35))
     ctx.setVelocitiesToTemperature(298.15*unit.kelvin,seed)
     integ.step(equil_steps)
 
     edges=np.linspace(0,1,101)
     hist=np.zeros(100)
     coord=[]
+    saved_distances=[]
     frames=sample_steps//sample_interval
     for n in range(frames):
         integ.step(sample_interval)
@@ -122,10 +150,24 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
         r=np.linalg.norm(dr,axis=1)
         hist+=np.histogram(r,bins=edges)[0]
         coord.append(float(np.sum(r<.35)))
+        saved_distances.append(r)
     vol=4*np.pi/3*(edges[1:]**3-edges[:-1]**3)
-    g=hist/(frames*vol*(len(waters)/box_nm**3))
+    # The constructed CN8/CN9 shell replaces a different number of solvent
+    # waters. Use ACTUAL system water count for RDF density normalization.
+    g=hist/(frames*vol*(len(water_positions)/box_nm**3))
     window=(edges[:-1]>=.20)&(edges[1:]<=.40)
     peak=int(np.argmax(np.where(window,g,-1)))
+    smooth=np.convolve(g,np.ones(5)/5,mode="same")
+    search=np.where((edges[:-1]>=.28)&(edges[:-1]<=.42))[0]
+    interior=search[2:-2]
+    local_min=[i for i in interior if smooth[i-1]>smooth[i] and smooth[i+1]>=smooth[i]]
+    first_min_index=local_min[0] if local_min else None
+    first_min_nm=float((edges[first_min_index]+edges[first_min_index+1])/2) if first_min_index is not None else None
+    cfirst=[int(np.sum(r<first_min_nm)) for r in saved_distances] if first_min_nm is not None else []
+    with (out/(ion.lower()+"_cn_timeseries.csv")).open("w",newline="") as f:
+        w=csv.writer(f);w.writerow(["frame","time_ps","CN_within_0p35nm","CN_at_RDF_first_min"])
+        for i,cn in enumerate(coord):
+            w.writerow([i,(i+1)*sample_interval*.002,cn,cfirst[i] if cfirst else ""])
     with (out/(ion.lower()+"_rdf.csv")).open("w",newline="") as f:
         w=csv.writer(f);w.writerow(["r_nm","g_LnO","raw_count"])
         for i in range(len(g)):
@@ -134,14 +176,24 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
     summary={
       "status":"SHORT_MD_SHAKEDOWN_NOT_EQUILIBRATED",
       "ion":ion,"doi_parameters":"10.1021/jp505875v",
-      "parameters":p,"water_model":"TIP3P",
-      "n_water":len(waters),"box_nm":box_nm,"net_charge_e":3,
+      "parameters":p,"water_model":"TIP3P","seed":seed,
+      "initial_cn_requested":initial_cn,
+      "initial_cn_before_minimization":initial_cn_actual,
+      "cn_after_minimization":minimized_cn,
+      "independent_shell_geometry":shell_info,
+      "n_water":len(water_positions),"box_nm":box_nm,
+      "initial_water_count_before_shell_replacement":len(waters),
+      "water_density_molecules_per_nm3":len(water_positions)/box_nm**3,"net_charge_e":3,
       "PME_background":"implicit uniform neutralizing plasma",
       "equilibration_ps":equil_steps*.002,
       "production_ps":frames*sample_interval*.002,
       "frames":frames,
       "observed_mean_CN_r0p35nm":float(np.mean(coord)),
       "observed_first_rdf_peak_nm":float((edges[peak]+edges[peak+1])/2),
+      "RDF_first_min_nm":first_min_nm,
+      "CN_mean_RDF_first_min":float(np.mean(cfirst)) if cfirst else None,
+      "CN_histogram_RDF_first_min":({str(j):int(sum(1 for v in cfirst if v==j)) for j in sorted(set(cfirst))} if cfirst else None),
+      "CN_0p35nm_block_means":([float(np.mean(p)) for p in np.array_split(coord,6)] if len(coord)>=6 else None),
       "openmm_version":openmm.version.version,
       "warnings":[
         "Short run; coordination number and RDF not statistically converged",
@@ -163,5 +215,8 @@ if __name__=="__main__":
     p.add_argument("--equil-steps",type=int,default=2000)
     p.add_argument("--sample-steps",type=int,default=4000)
     p.add_argument("--interval",type=int,default=25)
+    p.add_argument("--seed",type=int,default=20261031)
+    p.add_argument("--box-nm",type=float,default=2.5)
+    p.add_argument("--initial-cn",type=int,choices=[8,9],default=None)
     a=p.parse_args()
-    run(a.ion,a.out,a.equil_steps,a.sample_steps,a.interval)
+    run(a.ion,a.out,a.equil_steps,a.sample_steps,a.interval,box_nm=a.box_nm,seed=a.seed,initial_cn=a.initial_cn)

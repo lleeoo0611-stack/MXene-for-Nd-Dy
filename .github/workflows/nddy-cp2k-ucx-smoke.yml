@@ -1,0 +1,42 @@
+name: V6 CP2K UCX isolated MPI smoke
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/nddy-cp2k-ucx-smoke.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cp2k-ucx-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: cp2k
+          create-args: python=3.11 cp2k=2026.2
+          init-shell: bash
+      - name: Run CP2K Nd-water dimer with UCX TCP transport
+        shell: bash -el {0}
+        env:
+          UCX_TLS: tcp,self
+          UCX_NET_DEVICES: all
+          OMP_NUM_THREADS: '2'
+        run: |
+          mkdir -p build/ucx
+          python simulations/cp2k_hydration/generate_dimer.py --ion Nd --out build/ucx --cutoff 180
+          DATA_DIR=$(dirname "$(find "$CONDA_PREFIX" -name LnPP2_POTENTIALS -print -quit)")
+          cp "$DATA_DIR/BASIS_MOLOPT_LnPP2" "$DATA_DIR/BASIS_MOLOPT" build/ucx/
+          cat "$DATA_DIR/LnPP2_POTENTIALS" "$DATA_DIR/GTH_POTENTIALS" > build/ucx/POTENTIALS_COMBINED
+          cd build/ucx
+          cp2k_bin=$(command -v cp2k.ssmp || command -v cp2k.psmp || command -v cp2k)
+          timeout 120s "$cp2k_bin" -i nd_w1.inp -o nd_w1.out
+          grep "SCF run converged" nd_w1.out
+          grep "ENERGY| Total FORCE_EVAL" nd_w1.out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v6-cp2k-ucx-smoke-log
+          path: build/ucx/*.out
