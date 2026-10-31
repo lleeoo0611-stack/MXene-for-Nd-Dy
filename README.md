@@ -94,3 +94,10 @@ python -m unittest discover -s tests -p test_citrate_speciation_v3.py -v
 - [Automated verification](.github/workflows/nddy-atomistic-v5.yml) artifacts retain raw logs/MD summaries. These are short **proof-of-execution** calculations, not MXene adsorption or Nd/Dy membrane selectivity predictions.
 
 **V5 executions verified:** GitHub Actions [run #41161762479](https://github.com/lleeoo0611-stack/MXene-for-Nd-Dy/actions/runs/41161762479) completed five jobs successfully (input tests, Nd/Dy CP2K PBE/LnPP2 singlepoints, Nd/Dy OpenMM hydration short MD). Actual figures, RDF and metadata: [verified results](docs/V5_VERIFIED_RESULTS.md); [RDF comparison](figures/v5_md_Nd_Dy_RDF_0p02nm.svg). These are unoptimized DFT singlepoints and very short hydration MD, not citrate-MXene selective transport.
+
+## V7: CP2K checkpoint recovery and Dy CN8/CN9 initialized MD
+
+- [V7 repair methodology and execution status](docs/V7_RESTART_AND_DY_CN8_CN9.md).
+- [Checkpoint/last-XYZ recovery Python module](simulations/cp2k_hydration/checkpoint_v7.py), [two-stage GHA test](.github/workflows/nddy-checkpoint-v7.yml).
+- [Actual CN8/9 initial hydration shell builder](simulations/openmm_hydration/cn_initial_v7.py), [dual-initialization workflow](.github/workflows/nddy-dy-cn8-cn9-v7.yml), [trajectory comparison script](scripts/analyze_dy_cn_initial_v7.py).
+- **Execution verification outstanding:** Recent Actions, including previously passing workflows, failed before useful logs were accessible; no new V7 molecular dynamics trajectory or CP2K continuation has been confirmed. Do not label GitHub files/CI triggers as computed results.
