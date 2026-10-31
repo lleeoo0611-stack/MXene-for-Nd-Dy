@@ -1,0 +1,48 @@
+name: V7 archive and compare actual Dy CN8/CN9 MD artifacts
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/nddy-md-compare-v7.yml"
+      - "scripts/analyze_dy_cn_initial_v7.py"
+      - "results/v7_Dy_CN8_CN9_initial_120ps_replicas.csv"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  aggregate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41211990302
+          github-token: ${{ github.token }}
+          pattern: dy-CN*-seed*-120ps
+          merge-multiple: false
+          path: build/raw
+      - name: Verify original raw data and compute per-starting-CN outcomes
+        run: |
+          python scripts/analyze_dy_cn_initial_v7.py --artifacts-dir build/raw --output build/analyzed/V7_Dy_CN8_CN9_dynamics.csv
+          python - <<'PY'
+          from pathlib import Path
+          import csv
+          raw=list(Path('build/raw').rglob('dy_summary.json'))
+          assert len(raw)==4, [str(x) for x in raw]
+          rows=list(csv.DictReader(open('build/analyzed/V7_Dy_CN8_CN9_dynamics.csv')))
+          assert len(rows)==4
+          assert {int(row['initial_CN']) for row in rows}=={8,9}
+          for row in rows:
+              assert int(row['frames']) == 400
+              assert row['validated_equilibrium'] == 'False'
+          print('Verified four independent initial solvent-packings; scientific equilibrium is NOT established.')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v7-dy-cn8-cn9-analyzed-four-real-trajectories
+          path: build/analyzed/*.csv
