@@ -152,7 +152,9 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
         coord.append(float(np.sum(r<.35)))
         saved_distances.append(r)
     vol=4*np.pi/3*(edges[1:]**3-edges[:-1]**3)
-    g=hist/(frames*vol*(len(waters)/box_nm**3))
+    # The constructed CN8/CN9 shell replaces a different number of solvent
+    # waters. Use ACTUAL system water count for RDF density normalization.
+    g=hist/(frames*vol*(len(water_positions)/box_nm**3))
     window=(edges[:-1]>=.20)&(edges[1:]<=.40)
     peak=int(np.argmax(np.where(window,g,-1)))
     smooth=np.convolve(g,np.ones(5)/5,mode="same")
@@ -179,7 +181,9 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
       "initial_cn_before_minimization":initial_cn_actual,
       "cn_after_minimization":minimized_cn,
       "independent_shell_geometry":shell_info,
-      "n_water":len(waters),"box_nm":box_nm,"net_charge_e":3,
+      "n_water":len(water_positions),"box_nm":box_nm,
+      "initial_water_count_before_shell_replacement":len(waters),
+      "water_density_molecules_per_nm3":len(water_positions)/box_nm**3,"net_charge_e":3,
       "PME_background":"implicit uniform neutralizing plasma",
       "equilibration_ps":equil_steps*.002,
       "production_ps":frames*sample_interval*.002,
