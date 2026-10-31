@@ -1,0 +1,5 @@
+initial_CN,seed,initial_CN_recorded,minimized_CN,equilibration_ps,production_ps,frames,RDF_LnO_first_peak_A,RDF_first_min_A,sample_mean_CN_RDF_first_min,sampled_CN8_frames,sampled_CN9_frames,artifact_id,github_workflow_run_id,job_id,evidence
+8,20261031,8,8,40,80,400,2.3499999999999996,3.35,9,0,400,13048124199,41211990302,124583881956,completed_OpenMM_MD_run_not_equilibrium
+8,20261101,8,8,40,80,400,2.3499999999999996,3.15,9,0,400,13048703108,41211990302,124583881943,completed_OpenMM_MD_run_not_equilibrium
+9,20261031,9,9,40,80,400,2.3499999999999996,3.25,8.995,2,398,13048262600,41211990302,124583881863,completed_OpenMM_MD_run_not_equilibrium
+9,20261101,9,9,40,80,400,2.3499999999999996,3.25,9,0,400,13048588379,41211990302,124583881723,completed_OpenMM_MD_run_not_equilibrium
