@@ -1,0 +1,149 @@
+name: V7 CP2K cross-job checkpoint continuation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "simulations/cp2k_hydration/checkpoint_v7.py"
+      - "tests/test_checkpoint_cn_v7.py"
+      - ".github/workflows/nddy-checkpoint-v7.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m unittest discover -s tests -p "test_checkpoint_cn_v7.py" -v
+
+  cp2k-stage-one:
+    needs: unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      UCX_TLS: tcp,self
+      UCX_NET_DEVICES: all
+      OMP_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: cp2k
+          create-args: python=3.11 cp2k=2026.2
+          init-shell: bash
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41163885518
+          github-token: ${{ github.token }}
+          name: cp2k-Dy-H2O8-GEO_OPT-status-and-log
+          path: build/old
+      - name: Prepare Dy8 from last complete V6 XYZ (positions only)
+        shell: bash -el {0}
+        run: |
+          mkdir -p build/segment1
+          python simulations/cp2k_hydration/generate_v6.py --out build/segment1 --box 18 --cutoff 220 --eps-scf 1e-5 --max-iter 55
+          oldxyz=$(find build/old -name '*-pos-1.xyz' -type f | head -n 1)
+          test -s "$oldxyz"
+          python simulations/cp2k_hydration/checkpoint_v7.py --input build/segment1/dy_w8_geo.inp --output build/segment1/dy_w8_geo_seg1.inp --xyz "$oldxyz"
+          DATA_DIR=$(dirname "$(find "$CONDA_PREFIX" -name LnPP2_POTENTIALS -print -quit)")
+          cp "$DATA_DIR/BASIS_MOLOPT_LnPP2" "$DATA_DIR/BASIS_MOLOPT" build/segment1/
+          cat "$DATA_DIR/LnPP2_POTENTIALS" "$DATA_DIR/GTH_POTENTIALS" > build/segment1/POTENTIALS_COMBINED
+      - name: Bounded CP2K segment one
+        shell: bash -el {0}
+        working-directory: build/segment1
+        run: |
+          bin=$(command -v cp2k.ssmp || command -v cp2k.psmp || command -v cp2k)
+          set +e
+          timeout 240s "$bin" -i dy_w8_geo_seg1.inp -o dy_w8_geo_seg1.out
+          status=$?
+          set -e
+          echo "$status" > cp2k_exit_status.txt
+          echo "CP2K exit status=$status; 124 indicates timeout, not convergence."
+          find . -maxdepth 1 -type f \( -name '*.restart' -o -name '*.wfn' -o -name '*-pos-1.xyz' \) -print
+          test -n "$(find . -maxdepth 1 -type f \( -name '*.restart' -o -name '*-pos-1.xyz' \) -print -quit)"
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v7-dy8-checkpoint-seg1
+          if-no-files-found: warn
+          path: |
+            build/segment1/*.inp
+            build/segment1/*.out
+            build/segment1/*.json
+            build/segment1/*.restart*
+            build/segment1/*.wfn*
+            build/segment1/*-pos-1.xyz
+            build/segment1/cp2k_exit_status.txt
+
+  cp2k-stage-two:
+    needs: cp2k-stage-one
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      UCX_TLS: tcp,self
+      UCX_NET_DEVICES: all
+      OMP_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: cp2k
+          create-args: python=3.11 cp2k=2026.2
+          init-shell: bash
+      - uses: actions/download-artifact@v4
+        with:
+          name: v7-dy8-checkpoint-seg1
+          path: build/previous
+      - name: Restore actual CP2K restart and WFN if present
+        shell: bash -el {0}
+        run: |
+          mkdir -p build/segment2
+          cp build/previous/dy_w8_geo.inp build/segment2/
+          DATA_DIR=$(dirname "$(find "$CONDA_PREFIX" -name LnPP2_POTENTIALS -print -quit)")
+          cp "$DATA_DIR/BASIS_MOLOPT_LnPP2" "$DATA_DIR/BASIS_MOLOPT" build/segment2/
+          cat "$DATA_DIR/LnPP2_POTENTIALS" "$DATA_DIR/GTH_POTENTIALS" > build/segment2/POTENTIALS_COMBINED
+          rest=$(find build/previous -maxdepth 1 -name '*.restart' -type f | head -n 1)
+          wfn=$(find build/previous -maxdepth 1 -name '*.wfn' -type f | head -n 1)
+          xyz=$(find build/previous -maxdepth 1 -name '*-pos-1.xyz' -type f | head -n 1)
+          if [ -n "$rest" ]; then
+            if [ -n "$wfn" ]; then
+              python simulations/cp2k_hydration/checkpoint_v7.py --input build/segment2/dy_w8_geo.inp --output build/segment2/dy_w8_geo_seg2.inp --restart "$rest" --wfn "$wfn"
+            else
+              python simulations/cp2k_hydration/checkpoint_v7.py --input build/segment2/dy_w8_geo.inp --output build/segment2/dy_w8_geo_seg2.inp --restart "$rest"
+            fi
+          else
+            test -s "$xyz"
+            python simulations/cp2k_hydration/checkpoint_v7.py --input build/segment2/dy_w8_geo.inp --output build/segment2/dy_w8_geo_seg2.inp --xyz "$xyz"
+          fi
+      - name: Bounded CP2K second segment
+        shell: bash -el {0}
+        working-directory: build/segment2
+        run: |
+          bin=$(command -v cp2k.ssmp || command -v cp2k.psmp || command -v cp2k)
+          set +e
+          timeout 240s "$bin" -i dy_w8_geo_seg2.inp -o dy_w8_geo_seg2.out
+          status=$?
+          set -e
+          echo "$status" > cp2k_exit_status.txt
+          echo "Second segment exit status: $status"
+          test -s dy_w8_geo_seg2.out
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v7-dy8-checkpoint-seg2
+          if-no-files-found: warn
+          path: |
+            build/segment2/*.inp
+            build/segment2/*.out
+            build/segment2/*.json
+            build/segment2/*.restart*
+            build/segment2/*.wfn*
+            build/segment2/*-pos-1.xyz
+            build/segment2/cp2k_exit_status.txt
