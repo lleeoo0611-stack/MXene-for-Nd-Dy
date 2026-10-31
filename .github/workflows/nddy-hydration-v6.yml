@@ -32,6 +32,7 @@ jobs:
           path: build/v6_dft/*.inp
 
   cp2k-geopt-screen:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     env:
       UCX_TLS: tcp,self
