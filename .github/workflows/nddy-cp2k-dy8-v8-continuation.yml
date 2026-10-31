@@ -1,0 +1,83 @@
+name: V8 Dy(H2O)8 checkpoint continuation stage 3
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/nddy-cp2k-dy8-v8-continuation.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  continue-dy8-from-v7-stage2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    env:
+      UCX_TLS: tcp,self
+      UCX_NET_DEVICES: all
+      OMP_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: cp2k
+          create-args: python=3.11 cp2k=2026.2
+          init-shell: bash
+      - name: Restore verified V7 stage-2 restart and wavefunction artifacts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41211990321
+          github-token: ${{ github.token }}
+          name: v7-dy8-checkpoint-seg2
+          path: build/old
+      - name: Prepare CP2K continuation, preserving numeric settings and checkpoint
+        shell: bash -el {0}
+        run: |
+          mkdir -p build/cont
+          python simulations/cp2k_hydration/generate_v6.py --out build/cont --box 18 --cutoff 220 --eps-scf 1e-5 --max-iter 55
+          DATA_DIR=$(dirname "$(find "$CONDA_PREFIX" -name LnPP2_POTENTIALS -print -quit)")
+          cp "$DATA_DIR/BASIS_MOLOPT_LnPP2" "$DATA_DIR/BASIS_MOLOPT" build/cont/
+          cat "$DATA_DIR/LnPP2_POTENTIALS" "$DATA_DIR/GTH_POTENTIALS" > build/cont/POTENTIALS_COMBINED
+          rest=$(find build/old -maxdepth 1 -name '*.restart' -type f | head -n 1)
+          wfn=$(find build/old -maxdepth 1 -name '*.wfn' -type f | head -n 1)
+          test -s "$rest"
+          test -s "$wfn"
+          python simulations/cp2k_hydration/checkpoint_v7.py \
+            --input build/cont/dy_w8_geo.inp \
+            --output build/cont/dy_w8_geo_cont3.inp \
+            --restart "$rest" \
+            --wfn "$wfn"
+      - name: Run 540 s CP2K continuation and classify geometric convergence honestly
+        shell: bash -el {0}
+        working-directory: build/cont
+        run: |
+          set +e
+          cp2k_bin=$(command -v cp2k.ssmp || command -v cp2k.psmp || command -v cp2k)
+          timeout 540s "$cp2k_bin" -i dy_w8_geo_cont3.inp -o dy_w8_geo_cont3.out
+          status=$?
+          set -e
+          echo "$status" > cp2k_exit_status.txt
+          echo "V8 CP2K exit code: $status; 124 means incomplete time-limited run"
+          grep "ENERGY| Total FORCE_EVAL" dy_w8_geo_cont3.out | tail -n 3 || true
+          if grep -q "GEOMETRY OPTIMIZATION COMPLETED" dy_w8_geo_cont3.out; then
+            echo "CP2K GEOMETRY OPTIMIZATION COMPLETED: check force and displacement criteria."
+          else
+            echo "CP2K geometry optimization NOT verified as completed in this segment."
+          fi
+          python ../../simulations/cp2k_hydration/analyze_v6.py \
+            --log dy_w8_geo_cont3.out --directory . --output dy_w8_geo_cont3.status.json || true
+          test -s dy_w8_geo_cont3.out
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v8-dy8-cp2k-checkpoint-seg3
+          if-no-files-found: warn
+          path: |
+            build/cont/*.inp
+            build/cont/*.out
+            build/cont/*.json
+            build/cont/*.restart*
+            build/cont/*.wfn*
+            build/cont/*-pos-1.xyz
+            build/cont/cp2k_exit_status.txt
