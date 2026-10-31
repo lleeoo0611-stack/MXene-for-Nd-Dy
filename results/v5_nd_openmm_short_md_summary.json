@@ -1,0 +1,31 @@
+{
+  "status": "SHORT_MD_SHAKEDOWN_NOT_EQUILIBRATED",
+  "ion": "Nd",
+  "doi_parameters": "10.1021/jp505875v",
+  "parameters": {
+    "mass": 144.242,
+    "sigma_nm": 0.30718187801478897,
+    "epsilon_kJmol": 0.64794725224,
+    "c4_kJmol_nm4": 0.0891192
+  },
+  "water_model": "TIP3P",
+  "n_water": 500,
+  "box_nm": 2.5,
+  "net_charge_e": 3,
+  "PME_background": "implicit uniform neutralizing plasma",
+  "equilibration_ps": 4,
+  "production_ps": 8,
+  "frames": 160,
+  "observed_mean_CN_r0p35nm": 9.05,
+  "observed_first_rdf_peak_nm": 0.245,
+  "openmm_version": "8.4.0.dev-4768436",
+  "warnings": [
+    "Short run; coordination number and RDF not statistically converged",
+    "No MXene/citrate or counterions; not transport or hydration free energy",
+    "Published TIP3P Li-Merz parameters, not Duvail 2024 OPC parameter set",
+    "Fixed net +3 neutralizing PME background causes finite-size artifacts"
+  ],
+  "workflow_run_id": 41161762479,
+  "workflow_job_id": 124420634378,
+  "github_head_sha": "19ab57f0254f2821189bd8adae1605157b2ab9ec"
+}
