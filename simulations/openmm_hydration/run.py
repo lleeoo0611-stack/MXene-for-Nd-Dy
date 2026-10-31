@@ -112,6 +112,7 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
     edges=np.linspace(0,1,101)
     hist=np.zeros(100)
     coord=[]
+    saved_distances=[]
     frames=sample_steps//sample_interval
     for n in range(frames):
         integ.step(sample_interval)
@@ -122,10 +123,22 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
         r=np.linalg.norm(dr,axis=1)
         hist+=np.histogram(r,bins=edges)[0]
         coord.append(float(np.sum(r<.35)))
+        saved_distances.append(r)
     vol=4*np.pi/3*(edges[1:]**3-edges[:-1]**3)
     g=hist/(frames*vol*(len(waters)/box_nm**3))
     window=(edges[:-1]>=.20)&(edges[1:]<=.40)
     peak=int(np.argmax(np.where(window,g,-1)))
+    smooth=np.convolve(g,np.ones(5)/5,mode="same")
+    search=np.where((edges[:-1]>=.28)&(edges[:-1]<=.42))[0]
+    interior=search[2:-2]
+    local_min=[i for i in interior if smooth[i-1]>smooth[i] and smooth[i+1]>=smooth[i]]
+    first_min_index=local_min[0] if local_min else None
+    first_min_nm=float((edges[first_min_index]+edges[first_min_index+1])/2) if first_min_index is not None else None
+    cfirst=[int(np.sum(r<first_min_nm)) for r in saved_distances] if first_min_nm is not None else []
+    with (out/(ion.lower()+"_cn_timeseries.csv")).open("w",newline="") as f:
+        w=csv.writer(f);w.writerow(["frame","time_ps","CN_within_0p35nm","CN_at_RDF_first_min"])
+        for i,cn in enumerate(coord):
+            w.writerow([i,(i+1)*sample_interval*.002,cn,cfirst[i] if cfirst else ""])
     with (out/(ion.lower()+"_rdf.csv")).open("w",newline="") as f:
         w=csv.writer(f);w.writerow(["r_nm","g_LnO","raw_count"])
         for i in range(len(g)):
@@ -134,7 +147,7 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
     summary={
       "status":"SHORT_MD_SHAKEDOWN_NOT_EQUILIBRATED",
       "ion":ion,"doi_parameters":"10.1021/jp505875v",
-      "parameters":p,"water_model":"TIP3P",
+      "parameters":p,"water_model":"TIP3P","seed":seed,
       "n_water":len(waters),"box_nm":box_nm,"net_charge_e":3,
       "PME_background":"implicit uniform neutralizing plasma",
       "equilibration_ps":equil_steps*.002,
@@ -142,6 +155,10 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
       "frames":frames,
       "observed_mean_CN_r0p35nm":float(np.mean(coord)),
       "observed_first_rdf_peak_nm":float((edges[peak]+edges[peak+1])/2),
+      "RDF_first_min_nm":first_min_nm,
+      "CN_mean_RDF_first_min":float(np.mean(cfirst)) if cfirst else None,
+      "CN_histogram_RDF_first_min":({str(j):int(sum(1 for v in cfirst if v==j)) for j in sorted(set(cfirst))} if cfirst else None),
+      "CN_0p35nm_block_means":([float(np.mean(p)) for p in np.array_split(coord,6)] if len(coord)>=6 else None),
       "openmm_version":openmm.version.version,
       "warnings":[
         "Short run; coordination number and RDF not statistically converged",
@@ -163,5 +180,7 @@ if __name__=="__main__":
     p.add_argument("--equil-steps",type=int,default=2000)
     p.add_argument("--sample-steps",type=int,default=4000)
     p.add_argument("--interval",type=int,default=25)
+    p.add_argument("--seed",type=int,default=20261031)
+    p.add_argument("--box-nm",type=float,default=2.5)
     a=p.parse_args()
-    run(a.ion,a.out,a.equil_steps,a.sample_steps,a.interval)
+    run(a.ion,a.out,a.equil_steps,a.sample_steps,a.interval,box_nm=a.box_nm,seed=a.seed)
