@@ -1,0 +1,98 @@
+name: NdDy V5 actual DFT and MD hydration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "simulations/openmm_hydration/**"
+      - "simulations/cp2k_hydration/generate_dimer.py"
+      - "tests/test_atomistic_v5.py"
+      - ".github/workflows/nddy-atomistic-v5.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          python -m unittest discover -s tests -p 'test_atomistic_v5.py' -v
+          python simulations/cp2k_hydration/generate_dimer.py --ion Nd --out build/dft
+          python simulations/cp2k_hydration/generate_dimer.py --ion Dy --out build/dft
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nd-Dy-DFT-monohydrate-inputs
+          path: build/dft/*.inp
+  md:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        ion: [Nd, Dy]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install openmm==8.4.0 numpy
+      - name: Actual 12-6-4 TIP3P hydration MD
+        run: |
+          python simulations/openmm_hydration/run.py --ion ${{ matrix.ion }} --equil-steps 2000 --sample-steps 4000 --out build/md
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          a=list(Path("build/md").glob("*_summary.json"))
+          assert len(a)==1
+          s=json.loads(a[0].read_text())
+          assert s["frames"] == 160 and s["n_water"] > 150
+          assert 0 < s["observed_mean_CN_r0p35nm"] < 15
+          print(s)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: openmm-${{ matrix.ion }}-hydration-short-MD
+          path: build/md/*
+  dft:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        ion: [Nd, Dy]
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: cp2k
+          create-args: python=3.11 cp2k=2026.2
+          init-shell: bash
+      - name: Prepare official CP2K data
+        shell: bash -el {0}
+        run: |
+          mkdir -p build/dft
+          python simulations/cp2k_hydration/generate_dimer.py --ion ${{ matrix.ion }} --out build/dft
+          DATA_DIR=$(dirname "$(find "$CONDA_PREFIX" -name LnPP2_POTENTIALS -print -quit)")
+          cp "$DATA_DIR/BASIS_MOLOPT_LnPP2" "$DATA_DIR/BASIS_MOLOPT" build/dft/
+          cat "$DATA_DIR/LnPP2_POTENTIALS" "$DATA_DIR/GTH_POTENTIALS" > build/dft/POTENTIALS_COMBINED
+      - name: Actual CP2K singlepoint SCF and energy
+        shell: bash -el {0}
+        working-directory: build/dft
+        run: |
+          name=$(echo ${{ matrix.ion }} | tr '[:upper:]' '[:lower:]')_w1
+          CP2K_BIN=$(command -v cp2k.ssmp || command -v cp2k.psmp || command -v cp2k)
+          OMP_NUM_THREADS=2 timeout 540s "$CP2K_BIN" -i "$name.inp" -o "$name.out"
+          grep "SCF run converged" "$name.out"
+          grep "ENERGY| Total FORCE_EVAL" "$name.out"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cp2k-${{ matrix.ion }}-monohydrate-dft
+          path: |
+            build/dft/*.out
+            build/dft/*_w1.inp

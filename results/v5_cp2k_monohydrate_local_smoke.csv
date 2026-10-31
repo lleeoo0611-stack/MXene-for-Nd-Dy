@@ -1,0 +1,3 @@
+ion,cluster,geometry_status,NdDy_O_initial_A,cp2k_version,functional,pseudopotential_basis,cutoff_Ry,rel_cutoff_Ry,cell_A,eps_scf_hartree,energy_hartree,SCF_converged,source
+Nd,Nd(H2O)3+,unoptimized,2.5,2026.2,PBE,LnPP2_GTH-PBE-q11_DZVP-MOLOPT,180,30,12,5e-5,-50.558868654924169,true,local_user_uploaded_static_binary_2026-10-31
+Dy,Dy(H2O)3+,unoptimized,2.38,2026.2,PBE,LnPP2_GTH-PBE-q11_DZVP-MOLOPT,180,30,12,5e-5,-54.332836524869862,true,local_user_uploaded_static_binary_2026-10-31

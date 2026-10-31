@@ -85,3 +85,12 @@ python -m unittest discover -s tests -p test_citrate_speciation_v3.py -v
 
 - [V4 計算結果與實驗判讀](docs/V4_PILOT_DECISION.md)；[自由 Nd/Dy 的 SVG 圖](figures/v4_free_ions_pH5_5.svg)。
 - [CP2K 四組未最佳化的 .inp / .xyz 結構快照](simulations/cp2k_hydration/snapshots/)，並由 generator regression test 驗證；**不是 DFT 能量結果**。
+
+## V5: real atomistic DFT / MD hydration baseline (2026-10-31)
+
+- [DFT CP2K Nd/Dy monohydrate input generator](simulations/cp2k_hydration/generate_dimer.py): one water, PBE/LnPP2 4f-in-core; [locally converged low-precision single-points CSV](results/v5_cp2k_monohydrate_local_smoke.csv). Absolute total energies across **different Ln species must not be subtracted**.
+- [12-6-4 TIP3P OpenMM hydration MD](simulations/openmm_hydration/run.py) with published Li/Song/Merz parameters. CI workflow attempts **real MD trajectories and RDF**, and CP2K with official library data.
+- [Methods, limitations, provenance and next scientific gates](docs/ATOMISTIC_V5.md).
+- [Automated verification](.github/workflows/nddy-atomistic-v5.yml) artifacts retain raw logs/MD summaries. These are short **proof-of-execution** calculations, not MXene adsorption or Nd/Dy membrane selectivity predictions.
+
+**V5 executions verified:** GitHub Actions [run #41161762479](https://github.com/lleeoo0611-stack/MXene-for-Nd-Dy/actions/runs/41161762479) completed five jobs successfully (input tests, Nd/Dy CP2K PBE/LnPP2 singlepoints, Nd/Dy OpenMM hydration short MD). Actual figures, RDF and metadata: [verified results](docs/V5_VERIFIED_RESULTS.md); [RDF comparison](figures/v5_md_Nd_Dy_RDF_0p02nm.svg). These are unoptimized DFT singlepoints and very short hydration MD, not citrate-MXene selective transport.
