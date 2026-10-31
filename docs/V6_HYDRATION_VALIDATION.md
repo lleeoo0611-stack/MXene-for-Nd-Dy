@@ -39,3 +39,7 @@ python simulations/openmm_hydration/run.py --ion Nd --seed 20261031 --equil-step
 \`\`\`
 
 真正分子動力學數據與 CP2K 結構、日誌由 GitHub Actions artifacts 保存，程式本身與輸入/模型參數保存在 Repo。**該 CI 工作若逾時或 fail，必須如實記錄未完成。**
+
+## 2026-10-31 computation correction
+
+Six 40+80 ps MD jobs on [Actions run 41163249828](https://github.com/lleeoo0611-stack/MXene-for-Nd-Dy/actions/runs/41163249828) succeeded; first-min CN across independent velocity seeds Nd=9.035 ± 0.015 (sample SD), Dy=8.999 ± 0.004. All six started from identical solvent packing and Dy fails to show expected dominant eight coordination, so **hydration baseline NOT validated**. Full original records in GH artifacts; [PR discussion](https://github.com/lleeoo0611-stack/MXene-for-Nd-Dy/pull/3) has each seed and source. Nd9 GEO_OPT runner failed due MPICH/UCX `ud_verbs/mana_0` initialization, not demonstrated nonconvergence. Separate CP2K Nd–water **UCX_TCP smoke test passed** [run 41163608195](https://github.com/lleeoo0611-stack/MXene-for-Nd-Dy/actions/runs/41163608195); GEO_OPT now specifies `UCX_TLS=tcp,self`, `UCX_NET_DEVICES=all`. Expensive V5 and V6 MD repeat jobs are now opt-in via `workflow_dispatch` to avoid duplicate GitHub Actions usage after establishing six baseline traces.

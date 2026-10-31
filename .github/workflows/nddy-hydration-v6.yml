@@ -33,6 +33,9 @@ jobs:
 
   cp2k-geopt-screen:
     runs-on: ubuntu-24.04
+    env:
+      UCX_TLS: tcp,self
+      UCX_NET_DEVICES: all
     timeout-minutes: 32
     strategy:
       fail-fast: false
@@ -76,6 +79,7 @@ jobs:
             build/v6_dft/*.status.json
 
   hydration-md-multiseed-screen:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 22
     strategy:
