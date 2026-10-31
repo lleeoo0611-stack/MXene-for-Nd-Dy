@@ -88,6 +88,12 @@ def run(ion, output_dir, equil_steps=2000, sample_steps=4000,
     induction.addGlobalParameter("C4",p["c4_kJmol_nm4"])
     for _ in range(system.getNumParticles()):
         induction.addParticle([])
+    # OpenMM requires identical intramolecular exclusions across every
+    # NonbondedForce and CustomNonbondedForce, even with interaction groups.
+    for a in oxygen_indices:
+        induction.addExclusion(a,a+1)
+        induction.addExclusion(a,a+2)
+        induction.addExclusion(a+1,a+2)
     induction.addInteractionGroup({mid},set(oxygen_indices))
     induction.setNonbondedMethod(openmm.CustomNonbondedForce.CutoffPeriodic)
     induction.setCutoffDistance(.9*unit.nanometer)
