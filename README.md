@@ -92,3 +92,5 @@ python -m unittest discover -s tests -p test_citrate_speciation_v3.py -v
 - [12-6-4 TIP3P OpenMM hydration MD](simulations/openmm_hydration/run.py) with published Li/Song/Merz parameters. CI workflow attempts **real MD trajectories and RDF**, and CP2K with official library data.
 - [Methods, limitations, provenance and next scientific gates](docs/ATOMISTIC_V5.md).
 - [Automated verification](.github/workflows/nddy-atomistic-v5.yml) artifacts retain raw logs/MD summaries. These are short **proof-of-execution** calculations, not MXene adsorption or Nd/Dy membrane selectivity predictions.
+
+**V5 executions verified:** GitHub Actions [run #41161762479](https://github.com/lleeoo0611-stack/MXene-for-Nd-Dy/actions/runs/41161762479) completed five jobs successfully (input tests, Nd/Dy CP2K PBE/LnPP2 singlepoints, Nd/Dy OpenMM hydration short MD). Actual figures, RDF and metadata: [verified results](docs/V5_VERIFIED_RESULTS.md); [RDF comparison](figures/v5_md_Nd_Dy_RDF_0p02nm.svg). These are unoptimized DFT singlepoints and very short hydration MD, not citrate-MXene selective transport.
