@@ -1,0 +1,50 @@
+name: V7 Dy CN8 versus CN9 initial-shell MD
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "simulations/openmm_hydration/run.py"
+      - "simulations/openmm_hydration/cn_initial_v7.py"
+      - "tests/test_checkpoint_cn_v7.py"
+      - ".github/workflows/nddy-dy-cn8-cn9-v7.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepared-cn:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        start_cn: [8, 9]
+        seed: [20261031, 20261101]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install OpenMM for real molecular dynamics
+        run: pip install openmm==8.4.0 numpy
+      - name: Run Dy with independent initial water-shell coordination
+        run: |
+          python simulations/openmm_hydration/run.py --ion Dy --initial-cn ${{ matrix.start_cn }} --seed ${{ matrix.seed }} --equil-steps 20000 --sample-steps 40000 --interval 100 --box-nm 2.5 --out build/dy
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          f=next(Path('build/dy').glob('*_summary.json'))
+          s=json.loads(f.read_text())
+          assert s['ion']=='Dy'
+          assert s['initial_cn_requested'] == s['initial_cn_before_minimization']
+          assert s['initial_cn_requested'] in (8,9)
+          assert s['frames']==400
+          assert s['independent_shell_geometry']['water_count_final']>150
+          assert Path('build/dy').glob('*.xyz')
+          print('Real independent shell trajectory; NOT equilibrium or free energy:',s)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dy-CN${{ matrix.start_cn }}-seed${{ matrix.seed }}-120ps
+          if-no-files-found: warn
+          path: build/dy/*
